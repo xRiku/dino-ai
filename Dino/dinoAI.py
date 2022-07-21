@@ -2,6 +2,7 @@ import pygame
 import os
 import random
 import time
+import math
 from sys import exit
 
 pygame.init()
@@ -208,9 +209,6 @@ class KeyClassifier:
     def keySelector(self, distance, obHeight, speed, obType):
         pass
 
-    def updateState(self, state):
-        pass
-
 
 def first(x):
     return x[0]
@@ -220,10 +218,10 @@ class KeySimplestClassifier(KeyClassifier):
     def __init__(self, state):
         self.state = state
 
-    def keySelector(self, distance, obHeight, speed, obType):
+    def keySelector(self, distance, obHeight, game_speed, obType):
         self.state = sorted(self.state, key=first)
         for s, d in self.state:
-            if speed < s:
+            if game_speed < s:
                 limDist = d
                 break
         if distance <= limDist:
@@ -232,9 +230,6 @@ class KeySimplestClassifier(KeyClassifier):
             else:
                 return "K_UP"
         return "K_NO"
-
-    def updateState(self, state):
-        self.state = state
 
 
 def playerKeySelector():
@@ -388,6 +383,51 @@ def gradient_ascent(state, max_time):
     return state, max_value
 
 
+def change_probability(value,best_value,t):
+    p = 1/(math.exp(1)**((best_value-value)/t))
+    r = random.uniform(0,1)
+    if r < p:
+        return True
+    else:
+        return False
+
+def random_state(states):
+    index = random.randint(0,len(states)-1)
+    return states[index]
+
+
+# Simulated Anealing
+
+def simulated_annealing(state,t,alfa,iter_max,max_time):
+    solution = state
+    res, max_value = manyPlaysResults(3)
+    start = time.process_time()
+    end = 0
+    
+    while t >= 1 and end-start <= max_time:        
+        
+        for _ in range(iter_max):    
+            neighborhood = generate_neighborhood(state)
+            if neighborhood == []:
+                return solution,max_value               
+            aux = random_state(neighborhood)
+            auxAiPlayer = KeySimplestClassifier(aux)
+            res, aux_value = manyPlaysResults(2)
+            aiPlayer = KeySimplestClassifier(state)
+            res, state_value = manyPlaysResults(2)
+            if aux_value > state_value:
+                state = aux
+                if aux_value > max_value:
+                    solution = aux
+                    max_value = aux_value
+            else:
+                if change_probability(aux_value,state_value,t):
+                    state = aux
+        t = t*alfa
+        end = time.process_time()
+
+    return solution, max_value
+
 from scipy import stats
 import numpy as np
 
@@ -407,7 +447,7 @@ def main():
     aiPlayer = KeySimplestClassifier(initial_state)
     best_state, best_value = gradient_ascent(initial_state, 5000) 
     aiPlayer = KeySimplestClassifier(best_state)
-    res, value = manyPlaysResults(30)
+    res, value = manyPlaysResults(2)
     npRes = np.asarray(res)
     print(res, npRes.mean(), npRes.std(), value)
 

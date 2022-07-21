@@ -375,35 +375,33 @@ def random_state(states):
 
 # Simulated Anealing
 
-def simulated_annealing(state,t,alfa,iter_max,max_time):
+def simulated_annealing(state,t,alfa,max_time):
     solution = state
-    res, max_value = manyPlaysResults(KeyKNNClassifier(state), 3)
-    start = time.process_time()
+    res, max_value = manyPlaysResults(KeyKNNClassifier(state), 5)
+    start = time.time()
     end = 0
     
-    while t >= 1 and end-start <= max_time:        
-        
-        for _ in range(iter_max):    
-            neighborhood = generate_neighborhood(state)
-            if neighborhood == []:
-                return solution,max_value               
-            aux = random_state(neighborhood)
-            # auxAiPlayer = KeySimplestClassifier(aux)
-            auxAiPlayer = KeyKNNClassifier(aux)
-            res, aux_value = manyPlaysResults(auxAiPlayer, 3)
-            # aiPlayer = KeySimplestClassifier(state)
-            aiPlayer = KeyKNNClassifier(state)
-            res, state_value = manyPlaysResults(aiPlayer, 3)
-            if aux_value > state_value:
-                state = aux
-                if aux_value > max_value:
-                    solution = aux
-                    max_value = aux_value
+    while t >= 1 and end-start <= max_time:
+        neighborhood = generate_neighborhood(state)
+        if neighborhood == []:
+            return solution,max_value               
+        aux = random_state(neighborhood)
+		# auxAiPlayer = KeySimplestClassifier(aux)
+        auxAiPlayer = KeyKNNClassifier(aux)
+        res, aux_value = manyPlaysResults(auxAiPlayer, 5)
+		# aiPlayer = KeySimplestClassifier(state)
+        aiPlayer = KeyKNNClassifier(state)
+        res, state_value = manyPlaysResults(aiPlayer, 5)
+        if aux_value > state_value:
+            state = aux
+            if aux_value > max_value:
+                solution = aux
+                max_value = aux_value
             else:
                 if change_probability(aux_value,state_value,t):
                     state = aux
         t = t*alfa
-        end = time.process_time()
+        end = time.time()
 
     return solution, max_value
 
@@ -432,9 +430,9 @@ def main():
 	# aiPlayer = KeySimplestClassifier(initial_state)
 	# best_state, best_value = gradient_ascent(initial_state, 5000) 
 	# aiPlayer = KeySimplestClassifier(best_state)
-	initial_state = [[16, 182, 'K_DOWN'], [18, 350, 'K_DOWN'], [28, 479, 'K_NO'], [1000, 579, 'K_DOWN'], [10, 1500, 'K_NO'], [12, 200, 'K_NO'], [12, 150, 'K_UP'], [23, -8, 'K_DOWN'], [12, 50, 'K_UP'], [11, 50, 'K_UP'], [15, 100, 'K_UP'], [13, 100, 'K_NO'], [23.0, 645.0, 'K_NO'], [17, 1500, 'K_NO'], [19, 474, 'K_NO'], [19, 250, 'K_UP'], [21, 700, 'K_NO'], [21.0, 472.0, 'K_UP'], [21, 332, 'K_DOWN'], [22, 296, 'K_UP'], [20, 100, 'K_NO'], [21, -4, 'K_UP'], [21, 91, 'K_UP'], [18, -50, 'K_DOWN']]
+	initial_state = [[26, -57, 'K_DOWN'], [20, 129, 'K_DOWN'], [28, 592, 'K_DOWN'], [1003, 483, 'K_UP'], [10, 1500, 'K_NO'], [12, 200, 'K_NO'], [12, 150, 'K_UP'], [24, -150, 'K_NO'], [20, -6, 'K_NO'], [17, 33, 'K_DOWN'], [15, 100, 'K_UP'], [13, 100, 'K_NO'], [23.0, 632.0, 'K_NO'], [17, 1500, 'K_NO'], [16, 474, 'K_NO'], [16, 276, 'K_UP'], [21, 700, 'K_NO'], [21.0, 469.0, 'K_DOWN'], [31, 345, 'K_NO'], [20, 248, 'K_UP'], [35, -127, 'K_DOWN'], [23, 123, 'K_UP'], [18, 91, 'K_NO'], [18, -50, 'K_DOWN']]
 	aiPlayer = KeyKNNClassifier(initial_state)
-	best_state, best_value = simulated_annealing(initial_state, 200, 0.7, 10, 5000) 
+	best_state, best_value = simulated_annealing(initial_state, 200, 0.99, 10) 
 	aiPlayer = KeyKNNClassifier(best_state)
 
 	res, value = manyPlaysResults(aiPlayer, 30)

@@ -3,6 +3,7 @@ import os
 import random
 import time
 import math
+from sklearn.neighbors import KNeighborsClassifier
 from sys import exit
 
 pygame.init()
@@ -232,6 +233,25 @@ class KeySimplestClassifier(KeyClassifier):
         return "K_NO"
 
 
+class KeyKNNClassifier(KeyClassifier):
+    def __init__(self, state):
+        self.state = state
+        self.model = KNeighborsClassifier(n_neighbors=5)
+        X = [s[:-1] for s in self.state]
+        y = [s[-1] for s in self.state]
+        self.model.fit(X, y)
+
+    def keySelector(self, distance, obHeight, game_speed, obType):
+        prediction = self.model.predict([[game_speed, distance]])
+
+        if prediction == "K_UP":
+            if isinstance(obType, Bird) and obHeight > 50:
+                return "K_DOWN"
+        
+        return prediction
+        
+
+
 def playerKeySelector():
     userInputArray = pygame.key.get_pressed()
 
@@ -299,6 +319,7 @@ def playGame():
         if GAME_MODE == "HUMAN_MODE":
             userInput = playerKeySelector()
         else:
+            print(f'Distance {distance}, obHeight {obHeight}, game_speed {game_speed}, obType {obType}')
             userInput = aiPlayer.keySelector(distance, obHeight, game_speed, obType)
 
         if len(obstacles) == 0 or obstacles[-1].getXY()[0] < spawn_dist:
@@ -324,7 +345,7 @@ def playGame():
 
         score()
 
-        clock.tick(60)
+        # clock.tick(10)
         pygame.display.update()
 
         for obstacle in obstacles:
@@ -338,13 +359,20 @@ def playGame():
 
 def change_state(state, position, vs, vd):
     aux = state.copy()
-    s, d = state[position]
+    # s, d = state[position]
+    s, d, l = state[position]
+    s = float(s)
+    d = float(d)
     ns = s + vs
     nd = d + vd
     if ns < 15 or nd > 1000:
         return []
-    return aux[:position] + [(ns, nd)] + aux[position + 1:]
-
+    # return aux[:position] + [(ns, nd)] + aux[position + 1:]
+    # print(aux)
+    # print(type(aux))
+    # print(type(position))
+    # print(aux[:position] )
+    return aux[:position] + [[ns, nd, l]] + aux[position + 1:]
 
 # Neighborhood
 
@@ -400,7 +428,7 @@ def random_state(states):
 
 def simulated_annealing(state,t,alfa,iter_max,max_time):
     solution = state
-    res, max_value = manyPlaysResults(3)
+    res, max_value = manyPlaysResults(2)
     start = time.process_time()
     end = 0
     
@@ -411,9 +439,11 @@ def simulated_annealing(state,t,alfa,iter_max,max_time):
             if neighborhood == []:
                 return solution,max_value               
             aux = random_state(neighborhood)
-            auxAiPlayer = KeySimplestClassifier(aux)
+            # auxAiPlayer = KeySimplestClassifier(aux)
+            auxAiPlayer = KeyKNNClassifier(aux)
             res, aux_value = manyPlaysResults(2)
-            aiPlayer = KeySimplestClassifier(state)
+            # aiPlayer = KeySimplestClassifier(state)
+            aiPlayer = KeyKNNClassifier(state)
             res, state_value = manyPlaysResults(2)
             if aux_value > state_value:
                 state = aux
@@ -443,11 +473,39 @@ def manyPlaysResults(rounds):
 def main():
     global aiPlayer
 
-    initial_state = [(15, 250), (18, 350), (20, 450), (1000, 550)]
-    aiPlayer = KeySimplestClassifier(initial_state)
-    best_state, best_value = gradient_ascent(initial_state, 5000) 
-    aiPlayer = KeySimplestClassifier(best_state)
+    # initial_state = [(15, 250), (18, 350), (20, 450), (1000, 550)]
+    # aiPlayer = KeySimplestClassifier(initial_state)
+    # best_state, best_value = gradient_ascent(initial_state, 5000) 
+    # aiPlayer = KeySimplestClassifier(initial_state)
+    initial_state = [
+        [10, 1500, 'K_NO'],
+        [12, 200, 'K_NO'],
+        [12, 150, 'K_UP'],
+        [13, 50, 'K_UP'],
+        [12, 50, 'K_UP'],
+        [11, 50, 'K_UP'],
+        [15, 100, 'K_UP'],
+        [13, 100, 'K_NO'],
+        [15, 500, 'K_NO'],
+        [17, 1500, 'K_NO'],
+        [19, 400, 'K_NO'],
+        [19, 250, 'K_UP'],
+        [21, 700, 'K_NO'],
+        [21, 500, 'K_UP'],
+        [21, 300, 'K_NO'],
+        [21, 200, 'K_UP'],
+        [21, 100, 'K_NO'],
+        [21, 50, 'K_UP'],
+        [21, 0,'K_DOWN'],
+        [21, -50, 'K_DOWN'],
+     ]
+    initial_state = [[10, 1500, 'K_NO'], [12, 200, 'K_NO'], [12, 150, 'K_UP'], [13, 50, 'K_UP'], [12, 50, 'K_UP'], [11, 50, 'K_UP'], [15, 100, 'K_UP'], [13, 100, 'K_NO'], [15.0, 579.0, 'K_NO'], [17, 1500, 'K_NO'], [19, 400, 'K_NO'], [19, 250, 'K_UP'], [21, 700, 'K_NO'], [21.0, 452.0, 'K_UP'], [21, 300, 'K_NO'], [21, 200, 'K_UP'], [21, 100, 'K_NO'], [21, 50, 'K_UP'], [21, 0, 'K_DOWN'], [21, -50, 'K_DOWN']]
+    # initial_state = np.array(initial_state, dtype=object)
+    aiPlayer = KeyKNNClassifier(initial_state)
+    best_state, best_value = simulated_annealing(initial_state,200,0.1,10,120) 
+    aiPlayer = KeyKNNClassifier(best_state)
     res, value = manyPlaysResults(2)
+    print(f'Best State:\n{best_state}')
     npRes = np.asarray(res)
     print(res, npRes.mean(), npRes.std(), value)
 
